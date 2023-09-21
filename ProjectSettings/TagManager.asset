@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 2
   tags:
   - Patient
+  - HospitalCheckPoint
   layers:
   - Default
   - TransparentFX
