@@ -17,7 +17,9 @@ public class StretcherMovement : MonoBehaviour
     public Transform hospitalPoint;
 
     private PatientInfo currentPatient = null;
-    private bool onTheHospitalWay = false;
+
+    public GameObject stretcherMesh;
+    public bool isDropping;
 
     private void Awake()
     {
@@ -41,9 +43,10 @@ public class StretcherMovement : MonoBehaviour
         }
         else if (!AmbulanceSystem.Instance.patientIsTarget)
         {
-            StackSystem.Instance.patientsInTheAmbulance[StackSystem.Instance.patientsInTheAmbulance.Count-1].gameObject.SetActive(true);
+            StackSystem.Instance.patientsInTheAmbulance[StackSystem.Instance.patientsInTheAmbulance.Count - 1]
+                .gameObject.SetActive(true);
         }
-        
+
         transform.DOJump(stretcherJumpPoint.position, .5f, 1, .3f).OnComplete(() =>
         {
             agent.enabled = true;
@@ -54,19 +57,22 @@ public class StretcherMovement : MonoBehaviour
     public void GetInTheAmbulance()
     {
         agent.enabled = false;
+
         transform.rotation = stretcherInsidePoint.rotation;
 
         transform.DOJump(stretcherInsidePoint.position, .5f, 1, .4f).OnComplete(() =>
         {
-            transform.GetComponentInParent<AmbulanceSystem>().CloseDoors();
+            //transform.GetComponentInParent<AmbulanceSystem>().CloseDoors();
             transform.GetComponentInParent<AmbulanceMovement>().isDriveable = true;
+
+            AmbulanceSystem.Instance.currentTarget = null;
         });
     }
 
     IEnumerator GoToTarget(Transform target)
     {
         agent.SetDestination(target.position);
-        
+
         yield return new WaitWhile(() => ReachedDestinationOrGaveUp(agent) == false);
 
         if (AmbulanceSystem.Instance.patientIsTarget)
@@ -75,7 +81,7 @@ public class StretcherMovement : MonoBehaviour
         }
         else
         {
-            DropPatient(StackSystem.Instance.patientsInTheAmbulance[StackSystem.Instance.patientsInTheAmbulance.Count-1]);
+            DropPatient();
         }
     }
 
@@ -86,32 +92,55 @@ public class StretcherMovement : MonoBehaviour
         {
             patient.transform.rotation = patientPointOnStretcher.rotation;
             patient.transform.SetParent(transform);
-            
+
             StartCoroutine(BackToAmbulance());
-            
+
             currentPatient = patient.GetComponent<PatientInfo>();
             StackSystem.Instance.AddPatient(currentPatient);
             currentPatient = null;
         });
     }
-    
-    public void DropPatient(PatientInfo patient)
+
+    public void DropPatient()
     {
-        patient.transform.DOJump(hospitalPoint.position, .5f, 1, .4f).OnComplete(() =>
+        isDropping = true;
+        
+        if (StackSystem.Instance.patientsInTheAmbulance.Count >= 1)
         {
-            StackSystem.Instance.RemovePatient();
-            patient.transform.SetParent(hospitalPoint);
-            patient.transform.localPosition = new Vector3(0, 0, 0);
-            
-            StartCoroutine(BackToAmbulance());
-        });
+            for (int i = 0; i < StackSystem.Instance.patientsInTheAmbulance.Count; i++)
+            {
+                PatientInfo patient = StackSystem.Instance.patientsInTheAmbulance[i];
+
+                patient.transform.DOJump(hospitalPoint.position, .5f, 1, .4f).OnComplete(() =>
+                {
+                    StackSystem.Instance.RemovePatient(patient);
+                    patient.transform.SetParent(hospitalPoint);
+                    patient.transform.localPosition = new Vector3(0, 0, 0);
+
+                    StartCoroutine(BackToAmbulance());
+                });
+            }
+        }
     }
 
     IEnumerator BackToAmbulance()
     {
-        agent.SetDestination(stretcherJumpPoint.position);
+        AmbulanceSystem.Instance.currentTarget = stretcherJumpPoint;
+
+        agent.SetDestination(AmbulanceSystem.Instance.currentTarget.position);
         yield return new WaitWhile(() => ReachedDestinationOrGaveUp(agent) == false);
-        GetInTheAmbulance();
+
+        if (!isDropping)
+        {
+            GetInTheAmbulance();
+        }
+        else if (isDropping)
+        {
+            stretcherMesh.transform.DOJump(stretcherInsidePoint.position, .5f, 1, .4f).OnComplete(() =>
+            {
+                stretcherMesh.transform.DOJump(stretcherJumpPoint.position, .5f, 1, .3f);
+            });
+        }
     }
 
     public bool ReachedDestinationOrGaveUp(NavMeshAgent navMeshAgent)
