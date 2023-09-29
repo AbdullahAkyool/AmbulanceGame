@@ -75,25 +75,30 @@ public class NewStretcherSystem : MonoBehaviour
     public void GetIn()
     {
         agent.enabled = false;
-        transform.rotation = stretcherInsidePoint.rotation;
+        transform.localRotation = stretcherInsidePoint.localRotation;
+
+        currentPatient.transform.localRotation = transform.rotation;
+
 
         transform.DOJump(stretcherInsidePoint.position, .5f, 1, .4f).OnComplete(() =>
         {
             rightDoor.DOLocalRotate(new Vector3(0f, 0f, 0f), 2f);
             leftDoor.DOLocalRotate(new Vector3(0f, 0f, 0f), 2f).OnComplete(() =>
             {
-                transform.GetComponentInParent<AmbulanceMovement>().isDriveable = true;
-                AmbulanceSystem.Instance.currentTarget = null;
-
                 if (StackSystem.Instance.patientsInTheAmbulance.Count >= 1 && AmbulanceSystem.Instance.hospitalIsTarget)
                 {
+                    AmbulanceSystem.Instance.currentTarget = hospitalPoint;
                     isGetIn = false;
                     isGetOut = true;
                 }
                 else
                 {
+                    transform.GetComponentInParent<AmbulanceMovement>().isDriveable = true;
+                    AmbulanceSystem.Instance.currentTarget = null;
+                    currentPatient = null;
                     isGetIn = false;
                     isIdle = true;
+                    AmbulanceSystem.Instance.hospitalIsTarget = false;
                 }
             });
         });
@@ -114,8 +119,8 @@ public class NewStretcherSystem : MonoBehaviour
 
         currentPatient.transform.DOJump(patientPointOnStretcher.position, .5f, 1, .4f).OnComplete(() =>
         {
-            currentPatient.transform.rotation = patientPointOnStretcher.rotation;
             currentPatient.transform.SetParent(transform);
+            currentPatient.transform.localRotation = transform.rotation;
             StackSystem.Instance.AddPatient(currentPatient);
             AmbulanceSystem.Instance.patientIsTarget = false;
             
@@ -123,8 +128,6 @@ public class NewStretcherSystem : MonoBehaviour
 
             isBack = true;
             isPatient = false;
-            
-            currentPatient = null;
         });
     }
 

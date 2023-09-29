@@ -36,8 +36,12 @@ public class AmbulanceSystem : MonoBehaviour
 
         if (other.CompareTag("HospitalCheckPoint"))
         {
-
-            hospitalIsTarget = true;
+            if (StackSystem.Instance.patientsInTheAmbulance.Count >= 1)
+            {
+                GetComponent<AmbulanceMovement>().isDriveable = false;
+                hospitalIsTarget = true;
+            }
+            
             patientIsTarget = false;
 
             CurrentTarget(dropPoint);
