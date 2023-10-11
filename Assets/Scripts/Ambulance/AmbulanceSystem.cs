@@ -22,16 +22,16 @@ public class AmbulanceSystem : MonoBehaviour
     {
         if (other.CompareTag("Patient"))
         {
-            
-            GetComponent<AmbulanceMovement>().isDriveable = false;
-            other.GetComponent<Collider>().enabled = false;
+            if (other.GetComponent<PatientSystem>().isSick)
+            {
+                GetComponent<AmbulanceMovement>().isDriveable = false;
+                other.GetComponent<Collider>().enabled = false;
 
-            patientIsTarget = true;
-            hospitalIsTarget = false;
-            
-            CurrentTarget(other.transform);
+                patientIsTarget = true;
+                hospitalIsTarget = false;
 
-           // NewStretcherSystem.Instance.GetOut();
+                CurrentTarget(other.transform);
+            }
         }
 
         if (other.CompareTag("HospitalCheckPoint"))
@@ -41,12 +41,10 @@ public class AmbulanceSystem : MonoBehaviour
                 GetComponent<AmbulanceMovement>().isDriveable = false;
                 hospitalIsTarget = true;
             }
-            
+
             patientIsTarget = false;
 
             CurrentTarget(dropPoint);
-
-            //NewStretcherSystem.Instance.GetOut();
         }
     }
 
