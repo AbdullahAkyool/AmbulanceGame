@@ -8,9 +8,8 @@ using DG.Tweening;
 public class NewStretcherSystem : MonoBehaviour
 {
     public static NewStretcherSystem Instance;
-    
-    [Header("--States--")]
-    public bool isIdle;
+
+    [Header("--States--")] public bool isIdle;
     public bool isGetOut;
     public bool isPatient;
     public bool isHospital;
@@ -19,18 +18,17 @@ public class NewStretcherSystem : MonoBehaviour
 
     private NavMeshAgent agent;
 
-    [Header("--Ambulance Doors--")]
-    public Transform rightDoor;
+    [Header("--Ambulance Doors--")] public Transform rightDoor;
     public Transform leftDoor;
 
-    [Header("--Event Points--")]
-    public Transform stretcherInsidePoint;
+    [Header("--Event Points--")] public Transform stretcherInsidePoint;
     public Transform stretcherJumpPoint;
     public Transform patientPointOnStretcher;
     public Transform hospitalPoint;
+    public Transform bedPoint;
 
-    [Header("--Current Patient--")]
-    public PatientInfo currentPatient = null;
+
+    [Header("--Current Patient--")] public PatientInfo currentPatient = null;
 
     private void Awake()
     {
@@ -38,7 +36,7 @@ public class NewStretcherSystem : MonoBehaviour
 
         agent = GetComponent<NavMeshAgent>();
         agent.enabled = false;
-        
+
         isIdle = true;
     }
 
@@ -53,6 +51,14 @@ public class NewStretcherSystem : MonoBehaviour
 
     public void GetOut()
     {
+        if (StackSystem.Instance.patientsInTheAmbulance.Count >= 1)
+        {
+            foreach (var patient in StackSystem.Instance.patientsInTheAmbulance)
+            {
+                //patient.transform.GetChild(0).transform.GetChild(0).GetComponent<SkinnedMeshRenderer>().enabled = false;
+            }
+        }
+        
         rightDoor.DOLocalRotate(new Vector3(0f, -110f, 0f), 2f);
         leftDoor.DOLocalRotate(new Vector3(0f, 110f, 0f), 2f).OnComplete(() =>
         {
@@ -62,13 +68,13 @@ public class NewStretcherSystem : MonoBehaviour
 
                 if (AmbulanceSystem.Instance.patientIsTarget)
                 {
-                    //StartCoroutine(TakePatient());
                     isPatient = true;
                     isGetOut = false;
                 }
-                else if(AmbulanceSystem.Instance.hospitalIsTarget)
+                else if (AmbulanceSystem.Instance.hospitalIsTarget)
                 {
-                    //StartCoroutine(DropPatient());
+                    // StackSystem.Instance.patientsInTheAmbulance[StackSystem.Instance.patientsInTheAmbulance.Count - 1].transform.GetChild(0).GetComponent<SkinnedMeshRenderer>().enabled = true;
+                    
                     isHospital = true;
                     isGetOut = false;
                 }
@@ -80,7 +86,7 @@ public class NewStretcherSystem : MonoBehaviour
     {
         agent.enabled = false;
         transform.rotation = stretcherInsidePoint.rotation;
-        if(currentPatient!=null)currentPatient.transform.localRotation = stretcherInsidePoint.rotation;
+        if (currentPatient != null) currentPatient.transform.localRotation = stretcherInsidePoint.rotation;
 
         transform.DOJump(stretcherInsidePoint.position, .5f, 1, .4f).OnComplete(() =>
         {
@@ -109,7 +115,7 @@ public class NewStretcherSystem : MonoBehaviour
     public void TakePatient()
     {
         StartCoroutine(TakePatientCO());
-    } 
+    }
 
     public IEnumerator TakePatientCO()
     {
@@ -122,14 +128,12 @@ public class NewStretcherSystem : MonoBehaviour
         currentPatient.transform.DOJump(patientPointOnStretcher.position, .5f, 1, .4f).OnComplete(() =>
         {
             currentPatient.GetComponent<PatientSystem>().isPatientInAmbulance = true;
-            
+
             currentPatient.transform.rotation = patientPointOnStretcher.rotation;
             currentPatient.transform.SetParent(transform);
-            
+
             StackSystem.Instance.AddPatient(currentPatient);
             AmbulanceSystem.Instance.patientIsTarget = false;
-            
-            //StartCoroutine(GetBack());
 
             isBack = true;
             isPatient = false;
@@ -140,33 +144,51 @@ public class NewStretcherSystem : MonoBehaviour
     {
         StartCoroutine(DropPatientCO());
     }
-    
+
     public IEnumerator DropPatientCO()
     {
-        if (StackSystem.Instance.patientsInTheAmbulance.Count >= 1)
+        for (int i = 0; i < StackSystem.Instance.Beds.Count; i++)
+        {
+            if (StackSystem.Instance.Beds[i].isEmpty)
+            {
+                bedPoint = StackSystem.Instance.Beds[i].transform.GetChild(1);
+                StackSystem.Instance.Beds[i].isEmpty = false;
+                break;
+            }
+        }
+
+        if (StackSystem.Instance.patientsInTheAmbulance.Count >= 1 && bedPoint != null)
         {
             PatientInfo patient =
                 StackSystem.Instance.patientsInTheAmbulance[StackSystem.Instance.patientsInTheAmbulance.Count - 1];
-            
+
             Transform target = AmbulanceSystem.Instance.currentTarget;
             agent.SetDestination(target.position);
 
             yield return new WaitWhile(() => ReachedDestinationOrGaveUp(agent) == false);
 
-            patient.transform.DOJump(hospitalPoint.position, .5f, 1, .4f).OnComplete(() =>
+
+            patient.transform.DOJump(bedPoint.position, .5f, 1, .4f).OnComplete(() =>
             {
                 patient.GetComponent<PatientSystem>().isPatientInHospital = true;
-                
-                patient.transform.SetParent(hospitalPoint);
+
+                patient.transform.SetParent(bedPoint);
                 patient.transform.localPosition = new Vector3(0, 0, 0);
                 StackSystem.Instance.RemovePatient(patient);
-                //AmbulanceSystem.Instance.hospitalIsTarget = false;
+                bedPoint = null;
 
-                //StartCoroutine(GetBack());
+                //AmbulanceSystem.Instance.hospitalIsTarget = false;
 
                 isBack = true;
                 isHospital = false;
             });
+        }
+        else
+        {
+            isBack = true;
+            isHospital = false;
+
+            AmbulanceSystem.Instance.hospitalIsTarget = false;
         }
     }
 
@@ -174,7 +196,7 @@ public class NewStretcherSystem : MonoBehaviour
     {
         StartCoroutine(GetBackCO());
     }
-    
+
     public IEnumerator GetBackCO()
     {
         AmbulanceSystem.Instance.CurrentTarget(stretcherJumpPoint);
@@ -182,8 +204,6 @@ public class NewStretcherSystem : MonoBehaviour
         agent.SetDestination(AmbulanceSystem.Instance.currentTarget.position);
 
         yield return new WaitWhile(() => ReachedDestinationOrGaveUp(agent) == false);
-
-        //GetIn();
 
         isGetIn = true;
         isBack = false;
