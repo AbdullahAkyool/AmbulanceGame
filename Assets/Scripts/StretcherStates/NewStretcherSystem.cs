@@ -30,9 +30,13 @@ public class NewStretcherSystem : MonoBehaviour
 
     [Header("--Current Patient--")] public PatientInfo currentPatient = null;
 
+    [Header("--Doctor--")] private Doctor doctor;
+
     private void Awake()
     {
         Instance = this;
+
+        doctor = FindObjectOfType<Doctor>();
 
         agent = GetComponent<NavMeshAgent>();
         agent.enabled = false;
@@ -42,6 +46,8 @@ public class NewStretcherSystem : MonoBehaviour
 
     public void Idle()
     {
+        doctor.Idle();
+        
         if (AmbulanceSystem.Instance.patientIsTarget || AmbulanceSystem.Instance.hospitalIsTarget)
         {
             isIdle = false;
@@ -59,6 +65,8 @@ public class NewStretcherSystem : MonoBehaviour
             }
         }
         
+        doctor.Jump();
+
         rightDoor.DOLocalRotate(new Vector3(0f, -110f, 0f), 2f);
         leftDoor.DOLocalRotate(new Vector3(0f, 110f, 0f), 2f).OnComplete(() =>
         {
@@ -88,6 +96,8 @@ public class NewStretcherSystem : MonoBehaviour
         transform.rotation = stretcherInsidePoint.rotation;
         if (currentPatient != null) currentPatient.transform.localRotation = stretcherInsidePoint.rotation;
 
+        doctor.Jump();
+        
         transform.DOJump(stretcherInsidePoint.position, .5f, 1, .4f).OnComplete(() =>
         {
             rightDoor.DOLocalRotate(new Vector3(0f, 0f, 0f), 2f);
@@ -103,6 +113,8 @@ public class NewStretcherSystem : MonoBehaviour
                 {
                     transform.GetComponentInParent<AmbulanceMovement>().isDriveable = true;
                     AmbulanceSystem.Instance.currentTarget = null;
+                    currentPatient.transform.parent = stretcherInsidePoint;
+                    
                     currentPatient = null;
                     isGetIn = false;
                     isIdle = true;
@@ -119,12 +131,15 @@ public class NewStretcherSystem : MonoBehaviour
 
     public IEnumerator TakePatientCO()
     {
+        doctor.Walk();
+
         currentPatient = AmbulanceSystem.Instance.currentTarget.GetComponent<PatientInfo>();
         agent.SetDestination(currentPatient.transform.position);
 
         yield return new WaitWhile(() => ReachedDestinationOrGaveUp(agent) == false);
 
-
+        doctor.Idle();
+        
         currentPatient.transform.DOJump(patientPointOnStretcher.position, .5f, 1, .4f).OnComplete(() =>
         {
             currentPatient.GetComponent<PatientSystem>().isPatientInAmbulance = true;
@@ -164,9 +179,12 @@ public class NewStretcherSystem : MonoBehaviour
 
             Transform target = AmbulanceSystem.Instance.currentTarget;
             agent.SetDestination(target.position);
+            
+            doctor.Walk();
 
             yield return new WaitWhile(() => ReachedDestinationOrGaveUp(agent) == false);
 
+            doctor.Idle();
 
             patient.transform.DOJump(bedPoint.position, .5f, 1, .4f).OnComplete(() =>
             {
@@ -202,8 +220,12 @@ public class NewStretcherSystem : MonoBehaviour
         AmbulanceSystem.Instance.CurrentTarget(stretcherJumpPoint);
 
         agent.SetDestination(AmbulanceSystem.Instance.currentTarget.position);
+        
+        doctor.Walk();
 
         yield return new WaitWhile(() => ReachedDestinationOrGaveUp(agent) == false);
+        
+        doctor.Idle();
 
         isGetIn = true;
         isBack = false;

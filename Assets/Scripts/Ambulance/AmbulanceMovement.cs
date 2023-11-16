@@ -13,6 +13,16 @@ public class AmbulanceMovement : MonoBehaviour
 
     public bool isDriveable = true;
 
+    private void OnDisable()
+    {
+        Debug.Log("disable");
+    }
+    
+    private void OnDestroy()
+    {
+        Debug.Log("destroy");
+    }
+
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
