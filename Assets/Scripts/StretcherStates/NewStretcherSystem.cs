@@ -30,12 +30,19 @@ public class NewStretcherSystem : MonoBehaviour
 
     [Header("--Current Patient--")] public PatientInfo currentPatient = null;
 
+    public GameObject willDropPatient;
+
     [Header("--Doctor--")] private Doctor doctor;
 
     private void Awake()
     {
+        //StackSystem.Instance.AmbulanceToStretcherAction += GetOut2;
+        
         Instance = this;
+    }
 
+    private void Start()
+    {
         doctor = FindObjectOfType<Doctor>();
 
         agent = GetComponent<NavMeshAgent>();
@@ -57,14 +64,6 @@ public class NewStretcherSystem : MonoBehaviour
 
     public void GetOut()
     {
-        if (StackSystem.Instance.patientsInTheAmbulance.Count >= 1)
-        {
-            foreach (var patient in StackSystem.Instance.patientsInTheAmbulance)
-            {
-                //patient.transform.GetChild(0).transform.GetChild(0).GetComponent<SkinnedMeshRenderer>().enabled = false;
-            }
-        }
-        
         doctor.Jump();
 
         rightDoor.DOLocalRotate(new Vector3(0f, -110f, 0f), 2f);
@@ -72,24 +71,31 @@ public class NewStretcherSystem : MonoBehaviour
         {
             transform.DOJump(stretcherJumpPoint.position, .5f, 1, .3f).OnComplete(() =>
             {
-                agent.enabled = true;
-
                 if (AmbulanceSystem.Instance.patientIsTarget)
                 {
+                    agent.enabled = true;
+
                     isPatient = true;
                     isGetOut = false;
                 }
                 else if (AmbulanceSystem.Instance.hospitalIsTarget)
                 {
-                    // StackSystem.Instance.patientsInTheAmbulance[StackSystem.Instance.patientsInTheAmbulance.Count - 1].transform.GetChild(0).GetComponent<SkinnedMeshRenderer>().enabled = true;
+                    willDropPatient = StackSystem.Instance.patientsInTheAmbulance[StackSystem.Instance.patientsInTheAmbulance.Count - 1].gameObject;//IIIGGGHHHH
+                    willDropPatient.transform.GetChild(0).transform.GetChild(0).GetComponent<SkinnedMeshRenderer>().enabled = true; //:(((((
                     
+                    willDropPatient.transform.parent = patientPointOnStretcher;
+                    willDropPatient.transform.localPosition = Vector3.zero;
+                    willDropPatient.transform.localRotation = Quaternion.Euler(Vector3.zero);
+
+                    agent.enabled = true;
+
                     isHospital = true;
                     isGetOut = false;
                 }
             });
         });
     }
-
+    
     public void GetIn()
     {
         agent.enabled = false;
